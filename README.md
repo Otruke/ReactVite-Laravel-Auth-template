@@ -34,10 +34,11 @@ This is a template for a React (Vite) frontend and Laravel backend app with auth
     php artisan serve
 
 4. Start the frontend server:
+   ```bash
     cd ../frontend
     npm run dev
 
-5. Open the app in your browser:
+6. Open the app in your browser:
     - Frontend: http://localhost:5173
 
     - Backend: http://localhost:8000
