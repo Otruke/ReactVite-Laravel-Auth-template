@@ -1,34 +1,57 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import api from '../axios';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    // Initialize user state from localStorage if available
+    const [user, setUser] = useState(() => {
+        const storedUser = localStorage.getItem('user');
+        return storedUser ? JSON.parse(storedUser) : null;
+    });
+
+    // Initialize token state from localStorage if available
     const [token, setToken] = useState(localStorage.getItem('token') || null);
+
+    // Update localStorage whenever user or token changes
+    useEffect(() => {
+        if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
+        } else {
+            localStorage.removeItem('user');
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (token) {
+            localStorage.setItem('token', token);
+        } else {
+            localStorage.removeItem('token');
+        }
+    }, [token]);
 
     // Set the token in localStorage and axios headers
     const setAuthToken = (token) => {
-        localStorage.setItem('token', token);
-        setToken(token); // Update the token state
+        setToken(token);
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     };
 
-    // Clear the token from localStorage and axios headers
+    // Clear the token and user from localStorage and axios headers
     const clearAuthToken = () => {
-        localStorage.removeItem('token');
-        setToken(null); // Clear the token state
+        setToken(null);
+        setUser(null);
         delete api.defaults.headers.common['Authorization'];
     };
 
     const login = async (credentials) => {
         try {
-            // Fetch CSRF token before making the login request
+            
             await api.get('/sanctum/csrf-cookie');
             const response = await api.post('/login', credentials);
             setUser(response.data.user);
-            setAuthToken(response.data.token); // Save the token
+            setAuthToken(response.data.token);
+            
         } catch (error) {
             console.error('Login failed:', error);
             throw error;
@@ -37,12 +60,12 @@ export const AuthProvider = ({ children }) => {
 
     const register = async (userData) => {
         try {
-            // Fetch CSRF token before making the register request
+            
             await api.get('/sanctum/csrf-cookie');
-            const response = await api.post('/register', userData); // Ensure the correct endpoint
+            const response = await api.post('/register', userData);
             if (response && response.data) {
                 setUser(response.data.user);
-                setAuthToken(response.data.token); // Save the token
+                setAuthToken(response.data.token);
                 return response; // Return the response for handling in the component
             } else {
                 throw new Error('Invalid response from server');
@@ -56,8 +79,7 @@ export const AuthProvider = ({ children }) => {
     const logout = async () => {
         try {
             await api.post('/logout');
-            setUser(null);
-            clearAuthToken(); // Clear the token
+            clearAuthToken();
         } catch (error) {
             console.error('Logout failed:', error);
             throw error;
